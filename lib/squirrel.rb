@@ -65,15 +65,15 @@ module Squirrel
       @conditions = ConditionGroup.new(@model, "AND", @binding, &blk)
       @conditions.assign_joins( join_dependency )
     end
-    
+
     # Builds the dependencies needed to find what AR plans to call the tables in the query
     # by finding and sending what would be passed in as the +include+ parameter to #find.
     # This is a necessary step because what AR calls tables deeply nested might not be
     # completely obvious.)
     def join_dependency
       jd = ::ActiveRecord::Associations::ClassMethods::JoinDependency
-      @join_dependency ||= jd.new model, 
-                                  @conditions.to_find_include, 
+      @join_dependency ||= jd.new model,
+                                  @conditions.to_find_include,
                                   nil
     end
 
@@ -133,7 +133,7 @@ module Squirrel
       @conditions.to_find_offset
     end
 
-    # Used by #execute to paginates the result set if 
+    # Used by #execute to paginates the result set if
     # pagination was requested. In this case, it adds +pages+ and +total_results+ accessors
     # to the result set. See Paginator for more details.
     def paginate_result_set set, conditions
@@ -146,14 +146,14 @@ module Squirrel
       end
 
       total_results = model.count(conditions)
-      set.instance_variable_set("@pages", 
-                                Paginator.new( :count => total_results, 
-                                               :limit => limit, 
+      set.instance_variable_set("@pages",
+                                Paginator.new( :count => total_results,
+                                               :limit => limit,
                                                :offset => offset) )
       set.instance_variable_set("@total_results", total_results)
       set.extend( Squirrel::WillPagination )
     end
-    
+
     # ConditionGroups are groups of Conditions, oddly enough. They most closely map to models
     # in your schema, but they also handle the grouping jobs for the #any and #all blocks.
     class ConditionGroup
@@ -162,12 +162,12 @@ module Squirrel
       # Creates a ConditionGroup by passing in the following arguments:
       # * model: The AR subclass that defines what columns and associations will be accessible
       #   in the given block.
-      # * logical_join: A string containing the join that will be used when concatenating the 
-      #   conditions together. The root level ConditionGroup created by Query defaults the 
+      # * logical_join: A string containing the join that will be used when concatenating the
+      #   conditions together. The root level ConditionGroup created by Query defaults the
       #   join to be "AND", but the #any and #all methods will create specific ConditionGroups
       #   using "OR" and "AND" as their join, respectively.
       # * binding: The +binding+ of the block passed to the original #find. Will be used to
-      #   +eval+ what +self+ would be. This is necessary for using methods like +params+ and 
+      #   +eval+ what +self+ would be. This is necessary for using methods like +params+ and
       #   +session+ in your controllers.
       # * path: The "path" taken through the models to arrive at this model. For example, if
       #   your User class has_many Posts which has_many Comments each of which belongs_to User,
@@ -242,15 +242,15 @@ module Squirrel
         @condition_blocks << ConditionGroup.new(model, "AND", binding, path, &blk)
         @condition_blocks.last
       end
-      
+
       # Sets the arguments for the :order parameter. Arguments can be columns (i.e. Conditions)
       # or they can be strings (for "RANDOM()", etc.). If a Condition is used, and the column is
-      # negated using #not or #desc, then the resulting specification in the ORDER clause will 
+      # negated using #not or #desc, then the resulting specification in the ORDER clause will
       # be ordered descending. That is, "order_by name.desc" will become "ORDER name DESC"
       def order_by *columns
         @order += [columns].flatten
       end
-      
+
       # Flags the result set to be paginated according to the :page and :per_page parameters
       # to this method.
       def paginate opts = {}
@@ -260,19 +260,19 @@ module Squirrel
         page     = 1 if page < 1
         limit( per_page, ( page - 1 ) * per_page )
       end
-      
+
       # Similar to #paginate, but does not flag the result set for pagination. Takes a limit
       # and an offset (by default the offset is 0).
       def limit lim, off = nil
         @limit  = ( lim || @limit ).to_i
         @offset = ( off || @offset ).to_i
       end
-      
+
       # Returns true if this ConditionGroup or any of its subgroups have been flagged for pagination.
       def paginate?
         @paginator || @condition_blocks.any?(&:paginate?)
       end
-      
+
       # Negates the condition. Essentially prefixes the condition with NOT in the final query.
       def -@
         @negative = !@negative
@@ -287,7 +287,7 @@ module Squirrel
       #     id == 1
       #     name == "Joe"
       #   end
-      # 
+      #
       #   # => "NOT( id = 1 OR name = 'Joe')"
       def not &blk
         @negative = !@negative
@@ -305,7 +305,7 @@ module Squirrel
         unless @conditions.empty?
           my_association = unless @path.blank?
                              join_dependency.join_associations[ancestries.index(@path)]
-                           else 
+                           else
                              join_dependency.join_base
                            end
           @conditions.each do |column|
@@ -329,7 +329,7 @@ module Squirrel
           end
         end
       end
-      
+
       # Generates the :order parameter for this ConditionGroup. Because this does not reference
       # subgroups it should only be used from the outermost block (which is probably where it makes
       # the most sense to reference it, but it's worth mentioning)
@@ -337,8 +337,8 @@ module Squirrel
         if @order.blank?
           nil
         else
-          @order.collect do |col| 
-            col.respond_to?(:full_name) ? (col.full_name + (col.negative? ? " DESC" : "")) : col 
+          @order.collect do |col|
+            col.respond_to?(:full_name) ? (col.full_name + (col.negative? ? " DESC" : "")) : col
           end.join(", ")
         end
       end
@@ -350,7 +350,7 @@ module Squirrel
         return nil if segments.length == 0
         cond = "(" + segments.collect{|s| s.first }.join(" #{logical_join} ") + ")"
         cond = "NOT #{cond}" if negative?
-        
+
         values = segments.inject([]){|all, now| all + now[1..-1] }
         [ cond, *values ]
       end
@@ -370,7 +370,7 @@ module Squirrel
       def conditions
         @conditions + @condition_blocks
       end
-      
+
       # Returns true if this block has been negated using #not, #desc, or #-
       def negative?
         @negative
@@ -415,7 +415,7 @@ module Squirrel
     # Handles comparisons in the query. This class is analagous to the columns in the database.
     # When comparing the Condition to a value, the operators are used as follows:
     # * ==, === : Straight-up Equals. Can also be used as the "IN" operator if the operand is an Array.
-    #   Additionally, when the oprand is +nil+, the comparison is correctly generates as "IS NULL"."
+    #   Additionally, when the operand is +nil+, the comparison is correctly generates as "IS NULL"."
     # * =~ : The LIKE and REGEXP operators. If the operand is a String, it will generate a LIKE
     #   comparison. If it is a Regexp, the REGEXP operator will be used. NOTE: MySQL regular expressions
     #   are NOT the same as Ruby regular expressions. Also NOTE: No wildcards are inserted into the LIKE
@@ -457,7 +457,7 @@ module Squirrel
         @operand = nil
         self
       end
-      
+
       def -@ #:nodoc:
         @negative = !@negative
         self
@@ -470,13 +470,13 @@ module Squirrel
       def negative?
         @negative
       end
-      
+
       # Gets the name of the table that this Condition refers to by taking it out of the
       # association object.
       def assign_join association = nil
         @table_alias = association ? "#{association.aliased_table_name}." : ""
       end
-  
+
       # Returns the full name of the column, including any assigned table alias.
       def full_name
         "#{@table_alias}#{name}"
@@ -485,7 +485,7 @@ module Squirrel
       # Generates the :condition parameter for this Condition, in ["sql", args] format.]
       def to_find_conditions(join_association = {})
         return nil if operator.nil?
-        
+
         op, arg_format, values = operator, "?", [operand]
         op, arg_format, values = case operator
         when :<=>        then    [ "BETWEEN", "? AND ?",   [ operand.first, operand.last ] ]
@@ -498,17 +498,17 @@ module Squirrel
           case operand
           when Array     then    [ "IN",      "(?)",             values ]
           when Range     then    [ "IN",      "(?)",             values ]
-          when Condition then    [ "=",       operand.full_name, [] ] 
+          when Condition then    [ "=",       operand.full_name, [] ]
           when nil       then    [ "IS",      "NULL",            [] ]
           else                   [ "=",       arg_format,        values ]
           end
         when :contains   then    [ "LIKE",    arg_format,        values.map{|v| "%#{v}%" } ]
         else
           case operand
-          when Condition then    [ op,        oprand.full_name,  [] ] 
+          when Condition then    [ op,        operand.full_name,  [] ]
           else                   [ op,        arg_format,        values ]
           end
-        end		
+        end
         sql = "#{full_name} #{op} #{arg_format}"
         sql = "NOT (#{sql})" if @negative
         [ sql, *values ]
