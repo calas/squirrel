@@ -451,6 +451,18 @@ module Squirrel
         @operand = val
         self
       end
+      
+      def starts_with? val #:nodoc:
+        @operator = :starts_with
+        @operand = val
+        self
+      end
+      
+      def ends_with? val #:nodoc:
+        @operator = :ends_with
+        @operand = val
+        self
+      end
 
       def nil? #:nodoc:
         @operator = :==
@@ -503,6 +515,8 @@ module Squirrel
           else                   [ "=",       arg_format,        values ]
           end
         when :contains   then    [ "LIKE",    arg_format,        values.map{|v| "%#{v}%" } ]
+        when :starts_with then   [ "LIKE",    arg_format,        values.map{|v| "#{v}%" } ]
+        when :ends_with  then    [ "LIKE",    arg_format,        values.map{|v| "%#{v}" } ]
         else
           case operand
           when Condition then    [ op,        oprand.full_name,  [] ] 
